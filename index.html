@@ -51,7 +51,6 @@
       flex-grow: 1; /* Take up the remaining space */
       height: 100%; /* Fill the full height */
       background-color: #ffffff; /* Light background for visibility */
-      z-index: 10; /* Ensure it sits above other content */
     }
 
 /* Info container (with fixed width of 400px) */
@@ -62,8 +61,8 @@
   width:300px; /* Set width of infoDiv to 400px */
   height: 20%;
   padding-top: 10px;
-  background-color: #ffffff;
   overflow: hidden;
+  z-index: 10; /* Ensure it sits above other content */
 }
 
 /* Info container (with fixed width of 400px) */
@@ -74,7 +73,7 @@
   width:300px; /* Set width of infoDiv to 400px */
   height: 30%;
   padding-top: 250px;
-  background-color: #ffffff;
+  z-index: 10; /* Ensure it sits above other content */
 }
 
 #statsDiv {
@@ -83,9 +82,9 @@
   bottom: 0; /* Align it to the bottom of the viewport */
   width: 300px; /* Set width of statsDiv to 300px */
   height: 50%;
-  background-color: #ffffff;
   overflow-y: auto; /* Allow scrolling if content overflows */
   overflow: hidden;
+  z-index: 10; /* Ensure it sits above other content */
 }
 
 /* Optional styles for the content inside infoDiv */
