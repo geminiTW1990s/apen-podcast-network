@@ -59,11 +59,35 @@
   right: 0; /* Position it to the right side of the viewport */
   top: 0; /* Align it to the top of the viewport */
   width:300px; /* Set width of infoDiv to 400px */
-  height: 100%; /* Fill full height */
-  padding: 20px;
+  height: 20%;
+  padding-top: 10px;
+  background-color: #ffffff;
+  overflow: hidden;
+  z-index: 10; /* Ensure it sits above other content */
+}
+
+/* Info container (with fixed width of 400px) */
+#instructionDiv {
+  position: fixed; /* Fix the position relative to the viewport */
+  right: 0; /* Position it to the right side of the viewport */
+  top: 10; /* Align it to the top of the viewport */
+  width:300px; /* Set width of infoDiv to 400px */
+  height: 30%;
+  padding-top: 250px;
+  background-color: #ffffff;
+  z-index: 10; /* Ensure it sits above other content */
+}
+
+#statsDiv {
+  position: fixed; /* Fix the position relative to the viewport */
+  right: 0; /* Position it to the right side of the viewport */
+  bottom: 0; /* Align it to the bottom of the viewport */
+  width: 300px; /* Set width of statsDiv to 300px */
+  height: 50%;
   background-color: #ffffff;
   overflow-y: auto; /* Allow scrolling if content overflows */
   z-index: 10; /* Ensure it sits above other content */
+  overflow: hidden;
 }
 
 /* Optional styles for the content inside infoDiv */
@@ -91,16 +115,26 @@ h2 {
 <div id="plot-container">
   <svg width="1460" height="1460"></svg>
 </div>
+<div id="instructionDiv" class="instruction">
+  <h2>說明</h2>
+  <p>以<a href="https://open.spotify.com/show/3zzaXJZWFlZ8HjR4KeKVMZ">醫知彼 Podcast</a>各集數為出發點，連結至每集節目在Spotify網頁上「更多類似單集」區域的推薦內容，最後統整成網絡圖來描繪出Spotify推薦演算法的路徑</p>
+</div>
+<div id="statsDiv" class="stats"></div>
 <div id="infoDiv" class="info">
-  <h2>Podcast Title</h2>
-  <p id="nodeInfo">Podcast主題會顯示在此</p>
-  <h2>Statistics (2024/11/10)</h2>
+  <h2>Podcast Information</h2>
+  <p id="nodeInfo">Podcast資訊會顯示在此</p>
 </div>
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
+// Function to update the content of the div
+function updateContent(podcaster, title) {
+  const myDiv = document.getElementById('nodeInfo');
+  myDiv.innerHTML = '<p><strong>' + podcaster + '</strong></p>' + '<p>' + title + '</p>';
+}
+
 fetch('spotify-info.json')
   .then(response => response.json())  // Parse the JSON response
-  .then(data_spotify => {
+  .then(data_spotify => {    
     const podcaster_ls = [];
     for(const k in data_spotify){
       if (data_spotify.hasOwnProperty(k)) {
@@ -127,16 +161,32 @@ fetch('spotify-info.json')
     // Tree data ---------------------------------------
     d3.csv("tree.csv", function(error, data) {
       if (error) throw error;
+      
+      let counter = 0;
+      setInterval(function(){
+        if (counter > data.length) {
+          clearInterval(intervalId); // This stops the interval
+          console.log("Interval stopped because counter exceeded 100");
+          return;
+        }
+        
+        updateContent(data_spotify[data[counter]['id']]['podcaster'], data_spotify[data[counter]['id']]['title']);
+        counter++;
+      }, 100);
 
       var root = tree(stratify(data));
-
       var link = g.selectAll(".link")
         .data(root.links())
         .enter().append("path")
         .attr("class", "link")
         .attr("d", d3.linkRadial()
             .angle(function(d) { return d.x; })
-            .radius(function(d) { return d.y; }));
+            .radius(function(d) { return d.y; }))
+        .style("opacity", 0)  // Initially invisible
+        .transition()  // Add transition for opacity
+        .duration(500)
+        .delay((d, i) => i * 100)  // Delay each node with index * 200ms
+        .style("opacity", 1);
 
       var node = g.selectAll(".node")
         .data(root.descendants())
@@ -160,7 +210,12 @@ fetch('spotify-info.json')
           d3.select(this)
             .style("fill", "steelblue")
             .attr("r", 5);  // Reset radius
-        });
+        })
+        .style("opacity", 0)  // Initially invisible
+        .transition()  // Add transition for opacity
+        .duration(500)
+        .delay((d, i) => i * 100)  // Delay each node with index * 200ms
+        .style("opacity", 1);
 
       node.append("text")
         .attr("dy", "0.31em")
@@ -172,8 +227,13 @@ fetch('spotify-info.json')
           return data_spotify[d.id]['podcaster'];
         })
         .on("mouseover", function(event, d) {
-          nodeInfo.textContent = data_spotify[this.id]['title'];
-        });
+          nodeInfo.innerHTML = '<p><strong>' + data_spotify[this.id]['podcaster'] + '</strong></p>' + '<p>' + data_spotify[this.id]['title'] + '</p>';
+        })
+        .style("opacity", 0)  // Initially invisible
+        .transition()  // Add transition for opacity
+        .duration(500)
+        .delay((d, i) => i * 100)  // Delay each node with index * 200ms
+        .style("opacity", 1);
 
       // a list of dictionaries to store information of podcaster-to-id
       var podcaster_infos = [];
@@ -185,8 +245,20 @@ fetch('spotify-info.json')
       const data_pie = Object.values(topSevenDict);
       const radius = Math.min(200, 200) / 2;
 
+      d3.select("#statsDiv")
+        .append("h2")               // Append an <h2> element
+        .text("Top Seven Closest") // Set the text content of the <h2>
+        .style("color", "black")      // Optional: style the title with color
+        .style("font-size", "24px")  // Optional: set the font size
+        .style("text-align", "left")
+        .style("opacity", 0)  // Initially invisible
+        .transition()
+        .duration(1000)
+        .delay(data.length * 100)
+        .style("opacity", 1); // Optional: center the text
+      
       // Create an SVG element inside the 'infoDiv'
-      const svg2 = d3.select("#infoDiv")
+      const svg2 = d3.select("#statsDiv")
                     .append("svg")
                     .attr("width", 200)
                     .attr("height", 600)
@@ -204,7 +276,6 @@ fetch('spotify-info.json')
                     .outerRadius(radius - 10)
                     .innerRadius(0);
 
-      // Create the pie chart
       const pieChart = svg2.selectAll(".arc")
                           .data(pie(data_pie))
                           .enter().append("g")
@@ -212,15 +283,12 @@ fetch('spotify-info.json')
 
       pieChart.append("path")
               .attr("d", arc)
-              .attr("fill", (d, i) => color(i));
-
-      // Optionally, add labels to the pie chart
-      pieChart.append("text")
-              .attr("transform", (d) => `translate(${arc.centroid(d)})`)
-              .attr("dy", ".35em")
-              .style("text-anchor", "middle")
-              .text((d) => d.data)
-              .attr("fill", 'black');
+              .attr("fill", (d, i) => color(i))
+              .style("opacity", 0)  // Initially invisible
+              .transition()
+              .duration(1000)
+              .delay(data.length * 100)
+              .style("opacity", 1);
       
       // Create a legend group below the pie chart
       const legend = svg2.append("g")
@@ -238,7 +306,12 @@ fetch('spotify-info.json')
                 .attr("x", -100)
                 .attr("width", 18)
                 .attr("height", 18)
-                .attr("fill", (d, i) => color(i));
+                .attr("fill", (d, i) => color(i))
+                .style("opacity", 0)  // Initially invisible
+                .transition()
+                .duration(1000)
+                .delay(data.length * 100)
+                .style("opacity", 1);
 
       // Add text labels for each legend item
       legendItems.append("text")
@@ -248,7 +321,12 @@ fetch('spotify-info.json')
                 .style("text-anchor", "start")
                 .text(function(d) {
                   return(Object.keys(topSevenDict)[Object.values(topSevenDict).indexOf(d)]);
-                });
+                })
+                .style("opacity", 0)  // Initially invisible
+                .transition()
+                .duration(1000)
+                .delay(data.length * 100)
+                .style("opacity", 1);
 
       // Add event listeners to the pie chart legend
       legendItems.on("mouseover", function(event, d) {
